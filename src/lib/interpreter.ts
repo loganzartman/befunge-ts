@@ -5,7 +5,11 @@ import {State} from './State';
 import {choice, chr, mod, ord} from './util';
 
 class ExitProgram {}
-export class StepLimitExceeded {}
+export class StepLimitExceeded {
+  toString() {
+    return 'Step limit exceeded.';
+  }
+}
 
 function stepPc(state: State): void {
   let {pcx, pcy} = state;
@@ -136,7 +140,6 @@ function execInstruction(state: State, c: string, context: Context) {
 
 function stepState(state: State, context: Context): void {
   const c = state.program.get(state.pcx, state.pcy);
-  console.log(c, state);
   execInstruction(state, c, context);
   stepPc(state);
 }
