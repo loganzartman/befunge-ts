@@ -1,0 +1,19 @@
+<!doctype html>
+<html>
+  <head>
+    <link rel="stylesheet" href="./index.css" />
+  </head>
+  <body>
+    <script type="module" src="./index.ts"></script>
+    <div class="flex flex-row justify-center p-8">
+      <main class="w-[800px] max-w-full flex flex-col gap-2">
+        <textarea
+          id="source-input"
+          class="font-mono ring-1 ring-green-300 bg-green-50 rounded-md"
+        ></textarea>
+        <button id="run-button">Run</button>
+        <div id="output-display"></div>
+      </main>
+    </div>
+  </body>
+</html>
