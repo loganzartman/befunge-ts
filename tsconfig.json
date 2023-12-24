@@ -11,6 +11,5 @@
     "incremental": true,
     "isolatedModules": true
   },
-  "include": ["src/**/*.ts"],
-  "exclude": ["node_modules", "src/**/*.stories.ts"]
+  "exclude": ["node_modules", "src/**/*.test.ts"]
 }
