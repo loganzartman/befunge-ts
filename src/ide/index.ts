@@ -1,14 +1,14 @@
 import {StepLimitExceeded, execBefunge} from 'src/lib/interpreter';
+import {EditorView, basicSetup} from 'codemirror';
+import {highlightWhitespace} from '@codemirror/view';
 
 const runButton = document.getElementById('run-button')! as HTMLButtonElement;
-const sourceInput = document.getElementById(
-  'source-input',
-)! as HTMLTextAreaElement;
+const sourceContainer = document.getElementById('source-container')!;
 const outputDisplay = document.getElementById('output-display')!;
 
 function update({stepLimit}: {stepLimit?: number} = {}) {
   try {
-    const output = execBefunge(sourceInput.value, {stepLimit});
+    const output = execBefunge(getCode(), {stepLimit});
     outputDisplay.innerText = output ?? '';
   } catch (e) {
     if (e instanceof StepLimitExceeded) {
@@ -19,9 +19,18 @@ function update({stepLimit}: {stepLimit?: number} = {}) {
   }
 }
 
-sourceInput.addEventListener('keyup', () => {
+const updateListener = EditorView.updateListener.of(() => {
   update({stepLimit: 1000});
 });
+
+const editor = new EditorView({
+  extensions: [basicSetup, highlightWhitespace(), updateListener],
+  parent: sourceContainer,
+});
+
+function getCode(): string {
+  return editor.state.doc.toString();
+}
 
 runButton.addEventListener('click', () => {
   update();

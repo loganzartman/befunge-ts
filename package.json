@@ -25,10 +25,12 @@
     }
   },
   "devDependencies": {
+    "@codemirror/view": "^6.22.3",
     "@parcel/transformer-typescript-tsc": "^2.10.3",
     "@types/jest": "^29.5.11",
     "@typescript-eslint/eslint-plugin": "^6.15.0",
     "@typescript-eslint/parser": "^6.15.0",
+    "codemirror": "^6.0.1",
     "dedent": "^1.5.1",
     "eslint": "^8.56.0",
     "eslint-config-prettier": "^9.1.0",
