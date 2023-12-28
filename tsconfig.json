@@ -9,7 +9,14 @@
     "strict": true,
     "forceConsistentCasingInFileNames": true,
     "incremental": true,
-    "isolatedModules": true
+    "isolatedModules": true,
+    "jsx": "react-jsx",
+    "jsxImportSource": "preact",
+    "paths": {
+      "@/*": ["./src/*"],
+      "react": ["./node_modules/preact/compat/"],
+      "react-dom": ["./node_modules/preact/compat/"]
+    }
   },
   "exclude": ["node_modules", "src/**/*.test.ts"]
 }

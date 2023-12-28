@@ -1,5 +1,5 @@
-import {Direction} from './Direction';
-import {Program} from './Program';
+import {Direction} from '@/lib/Direction';
+import {Program} from '@/lib/Program';
 
 export class State {
   program: Program;

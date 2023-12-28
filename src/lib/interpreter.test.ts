@@ -1,5 +1,6 @@
 import dedent from 'dedent';
-import {StepLimitExceeded, execBefunge} from './interpreter';
+
+import {execBefunge, StepLimitExceeded} from '@/lib/interpreter';
 
 describe('execBefunge', () => {
   it('executes a minimal program', () => {

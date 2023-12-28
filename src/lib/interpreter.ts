@@ -1,8 +1,8 @@
-import {Context} from './Context';
-import {ALL_DIRECTIONS, Direction} from './Direction';
-import {createProgram} from './Program';
-import {State} from './State';
-import {choice, chr, mod, ord} from './util';
+import {Context} from '@/lib/Context';
+import {ALL_DIRECTIONS, Direction} from '@/lib/Direction';
+import {createProgram} from '@/lib/Program';
+import {State} from '@/lib/State';
+import {choice, chr, mod, ord} from '@/lib/util';
 
 class ExitProgram {}
 export class StepLimitExceeded {
@@ -28,7 +28,7 @@ function stepPc(state: State): void {
   state.pcy = mod(pcy, state.program.h);
 }
 
-function execInstruction(state: State, c: string, context: Context) {
+function execInstruction(state: State, c: string, _: Context) {
   if (state.stringmode && c !== '"') {
     state.push(ord(c));
     return;
@@ -132,7 +132,7 @@ function execInstruction(state: State, c: string, context: Context) {
   } else if (c === '@') {
     throw new ExitProgram();
   } else if (c >= '0' && c <= '9') {
-    state.push(Number.parseInt(c));
+    state.push(Number.parseInt(c, 10));
   } else {
     throw new Error(`Unsupported command '${c}'`);
   }
