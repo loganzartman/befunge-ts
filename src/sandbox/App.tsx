@@ -34,7 +34,7 @@ export default function App() {
 
   return (
     <div class="flex flex-col align-center p-8">
-      <h1 class="text-2xl mb-4">befunge-ts IDE</h1>
+      <h1 class="text-2xl mb-4">befunge-ts sandbox</h1>
       <main class="w-[800px] max-w-full flex flex-col gap-2">
         <div class="flex flex-row gap-2">
           <button id="button-run" class="p-2 bg-slate-200 rounded-md">

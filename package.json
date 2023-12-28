@@ -12,16 +12,16 @@
     "build": "pnpm build-lib && pnpm build-parcel",
     "build-parcel": "pnpm parcel build",
     "build-lib": "pnpm tsc -p src/lib",
-    "clean": "rimraf dist dist-ide"
+    "clean": "rimraf dist dist-sandbox"
   },
   "packageManager": "pnpm@8.12.1",
   "keywords": [],
   "author": "Logan Zartman",
   "license": "MIT",
   "targets": {
-    "ide": {
-      "source": "src/ide/index.html",
-      "distDir": "dist-ide"
+    "sandbox": {
+      "source": "src/sandbox/index.html",
+      "distDir": "dist-sandbox"
     }
   },
   "alias": {
