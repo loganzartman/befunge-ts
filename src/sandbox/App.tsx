@@ -1,6 +1,7 @@
 import CodeMirror, {
   highlightWhitespace,
   ReactCodeMirrorRef,
+  rectangularSelection,
 } from '@uiw/react-codemirror';
 import {useCallback, useEffect, useRef, useState} from 'preact/hooks';
 
@@ -49,9 +50,13 @@ export default function App() {
         </div>
         <CodeMirror
           ref={cmRef}
-          extensions={[highlightWhitespace()]}
+          extensions={[
+            highlightWhitespace(),
+            rectangularSelection({eventFilter: () => true}),
+          ]}
           value={code}
           onChange={handleChange}
+          basicSetup={{closeBrackets: false, bracketMatching: false}}
         />
         <div>{output}</div>
       </main>
