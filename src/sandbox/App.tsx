@@ -5,17 +5,36 @@ import CodeMirror, {
 } from '@uiw/react-codemirror';
 import {useCallback, useEffect, useRef, useState} from 'preact/hooks';
 
-import {execBefunge, StepLimitExceeded} from '@/lib/interpreter';
+import {stepBefunge, StepLimitExceeded} from '@/lib/interpreter';
+import {Heatmap, showHeatmap} from '@/sandbox/heatmap';
 
 export default function App() {
   const cmRef = useRef<ReactCodeMirrorRef>();
+  const heatmapRef = useRef<Heatmap>(new Heatmap());
   const [output, setOutput] = useState<string>('');
   const [code, setCode] = useState<string>('');
 
   const update = useCallback((code: string, stepLimit: number) => {
+    const doc = cmRef.current?.view?.state.doc;
     try {
-      const newOutput = execBefunge(code, {stepLimit});
-      setOutput(newOutput ?? '');
+      const heatmap = heatmapRef.current;
+      const outputBuffer = [];
+      let first = true;
+      for (const {state, output} of stepBefunge(code, {stepLimit})) {
+        if (first) {
+          heatmap.resize(state.program.w * state.program.h);
+          first = false;
+        }
+        if (doc) {
+          const line = doc.line(state.pcy + 1);
+          if (state.pcx < line.length) {
+            const pos = line.from + state.pcx;
+            heatmap.bump(pos);
+          }
+        }
+        outputBuffer.push(output);
+      }
+      setOutput(outputBuffer.join(''));
     } catch (e) {
       if (e instanceof StepLimitExceeded) {
         setOutput('⏱ Timeout');
@@ -26,7 +45,7 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    update(code, 1000);
+    update(code, 10_000);
   }, [code, update]);
 
   const handleChange = useCallback((value: string) => {
@@ -51,6 +70,7 @@ export default function App() {
         <CodeMirror
           ref={cmRef}
           extensions={[
+            showHeatmap(heatmapRef.current),
             highlightWhitespace(),
             rectangularSelection({eventFilter: () => true}),
           ]}

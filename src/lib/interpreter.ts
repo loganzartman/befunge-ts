@@ -144,7 +144,9 @@ function stepState(state: State, context: Context): void {
   stepPc(state);
 }
 
-function* runState(state: State, context: Context): Generator<string> {
+type Step = {state: State; output: string};
+
+function* runState(state: State, context: Context): Generator<Step> {
   let i = 0;
   while (true) {
     if (i++ > context.stepLimit) {
@@ -152,9 +154,9 @@ function* runState(state: State, context: Context): Generator<string> {
     }
     try {
       stepState(state, context);
-      const newOutput = state.getOutput();
+      const output = state.getOutput();
       state.output.length = 0;
-      yield newOutput;
+      yield {state, output};
     } catch (e) {
       if (e instanceof ExitProgram) {
         break;
@@ -174,7 +176,7 @@ function* runState(state: State, context: Context): Generator<string> {
 export function* stepBefunge(
   src: string,
   contextOptions: Partial<Context> = {},
-): Generator<string> {
+): Generator<Step> {
   const program = createProgram(src);
   const state = new State(program);
   const context = {interactive: false, stepLimit: Infinity, ...contextOptions};
@@ -192,7 +194,7 @@ export function execBefunge(
   contextOptions: Partial<Context> = {},
 ): string | undefined {
   const outputBuffer = [];
-  for (const output of stepBefunge(src, contextOptions))
+  for (const {output} of stepBefunge(src, contextOptions))
     outputBuffer.push(output);
   return outputBuffer.join('');
 }
