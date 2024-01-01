@@ -2,6 +2,12 @@
 @tailwind components;
 @tailwind utilities;
 
+html,
+body {
+  background: #222;
+  color: #bbb;
+}
+
 .cm-editor {
   font-size: 16pt;
 }

@@ -1,5 +1,6 @@
 import CodeMirror, {
   highlightWhitespace,
+  keymap,
   ReactCodeMirrorRef,
   rectangularSelection,
 } from '@uiw/react-codemirror';
@@ -7,6 +8,7 @@ import {useCallback, useEffect, useRef, useState} from 'preact/hooks';
 
 import {stepBefunge, StepLimitExceeded} from '@/lib/interpreter';
 import {Heatmap, showHeatmap} from '@/sandbox/heatmap';
+import {padLines} from '@/sandbox/padlines';
 
 export default function App() {
   const cmRef = useRef<ReactCodeMirrorRef>();
@@ -69,14 +71,21 @@ export default function App() {
         </div>
         <CodeMirror
           ref={cmRef}
+          theme="dark"
+          value={code}
+          onChange={handleChange}
+          basicSetup={{
+            closeBrackets: false,
+            bracketMatching: false,
+            indentOnInput: false,
+            crosshairCursor: true,
+          }}
           extensions={[
+            padLines({char: ' '}),
             showHeatmap(heatmapRef.current),
             highlightWhitespace(),
             rectangularSelection({eventFilter: () => true}),
           ]}
-          value={code}
-          onChange={handleChange}
-          basicSetup={{closeBrackets: false, bracketMatching: false}}
         />
         <div>{output}</div>
       </main>
