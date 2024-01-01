@@ -1,6 +1,5 @@
 import CodeMirror, {
   highlightWhitespace,
-  keymap,
   ReactCodeMirrorRef,
   rectangularSelection,
 } from '@uiw/react-codemirror';
@@ -18,8 +17,9 @@ export default function App() {
 
   const update = useCallback((code: string, stepLimit: number) => {
     const doc = cmRef.current?.view?.state.doc;
+    const heatmap = heatmapRef.current;
+    let lastPos = 0;
     try {
-      const heatmap = heatmapRef.current;
       const outputBuffer = [];
       let first = true;
       for (const {state, output} of stepBefunge(code, {stepLimit})) {
@@ -31,6 +31,7 @@ export default function App() {
           const line = doc.line(state.pcy + 1);
           if (state.pcx < line.length) {
             const pos = line.from + state.pcx;
+            lastPos = pos;
             heatmap.bump(pos);
           }
         }
@@ -41,6 +42,7 @@ export default function App() {
       if (e instanceof StepLimitExceeded) {
         setOutput('⏱ Timeout');
       } else {
+        heatmap.error(lastPos);
         setOutput(`ERROR: ${e}`);
       }
     }
