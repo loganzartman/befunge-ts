@@ -2,6 +2,22 @@
 @tailwind components;
 @tailwind utilities;
 
+@font-face {
+  font-family: 'Monaspace Neon';
+  src: url('./font/MonaspaceNeonVarVF[wght\,wdth\,slnt].woff2') format('woff2');
+  src: url('./font/MonaspaceNeonVarVF[wght\,wdth\,slnt].woff') format('woff');
+}
+
+@font-face {
+  font-family: 'Monaspace Xenon';
+  src: url('./font/MonaspaceXenonVarVF[wght\,wdth\,slnt].woff2') format('woff2');
+  src: url('./font/MonaspaceXenonVarVF[wght\,wdth\,slnt].woff') format('woff');
+}
+
+:root {
+  color-scheme: dark;
+}
+
 html,
 body {
   background: #222;
@@ -9,5 +25,22 @@ body {
 }
 
 .cm-editor {
-  font-size: 16pt;
+  font-size: 14pt;
+  font-variant-ligatures: contextual;
+}
+
+.cm-editor .cm-highlightSpace {
+  color: rgba(255, 255, 255, 0.25);
+}
+
+.cm-editor .cm-scroller {
+  line-height: 1;
+}
+
+.cm-editor .cm-scroller {
+  font-family: 'Monaspace Neon';
+}
+
+.cm-editor .cm-content {
+  font-family: 'Monaspace Neon';
 }
