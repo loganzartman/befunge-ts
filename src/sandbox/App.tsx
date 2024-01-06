@@ -11,6 +11,7 @@ import {State} from '@/lib/State';
 import {chr} from '@/lib/util';
 import {Heatmap, showHeatmap} from '@/sandbox/heatmap';
 import {padLines} from '@/sandbox/padlines';
+import {decodeHash, encodeHash} from '@/sandbox/sharing';
 
 type Status = 'none' | 'exited' | 'timeout' | 'error';
 
@@ -102,6 +103,18 @@ export default function App() {
     update(code, 10_000);
   }, [code, update]);
 
+  useEffect(() => {
+    const h = window.location.hash;
+    if (h) {
+      try {
+        const newCode = decodeHash(h.substring(1));
+        setCode(newCode);
+      } catch (e) {
+        console.log(e);
+      }
+    }
+  }, []);
+
   const handleChange = useCallback((value: string) => {
     setCode(value);
   }, []);
@@ -116,28 +129,29 @@ export default function App() {
     </div>
   ));
 
+  const handleShare = useCallback(() => {
+    window.location.hash = encodeHash(code);
+  }, [code]);
+
   return (
     <div class="flex flex-col items-center p-8">
       <h1 class="text-2xl mb-4 font-mono-serif">befunge-ts sandbox</h1>
       <main class="max-w-full w-[1000px] flex flex-col items-start">
         <div class="flex flex-row self-stretch gap-3 p-3 rounded-t-lg bg-zinc-900">
-          <button
-            id="button-run"
-            class="p-2 ring-2 ring-zinc-700 rounded-md font-mono-serif transition-colors hover:transition-none hover:bg-zinc-700"
-          >
+          <button class="p-2 ring-2 ring-zinc-700 rounded-md font-mono-serif transition-colors hover:transition-none hover:bg-zinc-700">
             Run
           </button>
-          <button
-            id="button-step"
-            class="p-2 ring-2 ring-zinc-700 rounded-md font-mono-serif transition-colors hover:transition-none hover:bg-zinc-700"
-          >
+          <button class="p-2 ring-2 ring-zinc-700 rounded-md font-mono-serif transition-colors hover:transition-none hover:bg-zinc-700">
             Step
           </button>
+          <button class="p-2 ring-2 ring-zinc-700 rounded-md font-mono-serif transition-colors hover:transition-none hover:bg-zinc-700">
+            Stop
+          </button>
           <button
-            id="button-stop"
+            onClick={handleShare}
             class="p-2 ring-2 ring-zinc-700 rounded-md font-mono-serif transition-colors hover:transition-none hover:bg-zinc-700"
           >
-            Stop
+            Share
           </button>
         </div>
         <CodeMirror

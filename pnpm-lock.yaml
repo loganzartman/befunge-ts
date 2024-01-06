@@ -26,6 +26,9 @@ devDependencies:
   '@uiw/react-codemirror':
     specifier: ^4.21.21
     version: 4.21.21(@babel/runtime@7.23.6)(@codemirror/autocomplete@6.11.1)(@codemirror/language@6.9.3)(@codemirror/lint@6.4.2)(@codemirror/search@6.5.5)(@codemirror/state@6.3.3)(@codemirror/theme-one-dark@6.1.2)(@codemirror/view@6.22.3)(codemirror@6.0.1)(react-dom@18.2.0)(react@18.2.0)
+  base2048:
+    specifier: ^2.0.2
+    version: 2.0.2
   codemirror:
     specifier: ^6.0.1
     version: 6.0.1(@lezer/common@1.1.2)
@@ -56,6 +59,9 @@ devDependencies:
   jest:
     specifier: ^29.7.0
     version: 29.7.0(@types/node@20.10.5)(ts-node@10.9.2)
+  lz-string:
+    specifier: ^1.5.0
+    version: 1.5.0
   parcel:
     specifier: ^2.10.3
     version: 2.10.3(postcss@8.4.32)(typescript@5.3.3)
@@ -2692,6 +2698,10 @@ packages:
       safe-buffer: 5.2.1
     dev: true
 
+  /base2048@2.0.2:
+    resolution: {integrity: sha512-C2zXZf5AY2re5bUloEgZcidQmiKvS3bob6cKDjDiYRW27w6t06O9pDa+JxPkl2zVUB88qnVZ3nu2KvZUyIDOWg==}
+    dev: true
+
   /big-integer@1.6.52:
     resolution: {integrity: sha512-QxD8cf2eVqJOOz63z6JIN9BzvVs/dlySa5HGSBH5xtR8dPteIRQnBxxKqkNTiT6jbDTF6jAfrd4oMcND9RGbQg==}
     engines: {node: '>=0.6'}
@@ -5040,6 +5050,11 @@ packages:
     engines: {node: '>=10'}
     dependencies:
       yallist: 4.0.0
+    dev: true
+
+  /lz-string@1.5.0:
+    resolution: {integrity: sha512-h5bgJWpxJNswbU7qCrV0tIKQCaS3blPDrqKWx+QxzuzL1zGUzij9XCWLrSLsJPu5t+eWA/ycetzYAO5IOMcWAQ==}
+    hasBin: true
     dev: true
 
   /make-dir@4.0.0:
