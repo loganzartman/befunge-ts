@@ -21,7 +21,8 @@
   "targets": {
     "sandbox": {
       "source": "src/sandbox/index.html",
-      "distDir": "dist-sandbox"
+      "distDir": "dist-sandbox",
+      "scopeHoist": false
     }
   },
   "alias": {
