@@ -32,4 +32,10 @@ describe('execBefunge', () => {
       execBefunge('01234@', {stepLimit: 5});
     }).not.toThrow(StepLimitExceeded);
   });
+
+  it("doesn't throw on an empty program", () => {
+    expect(() => {
+      execBefunge('', {stepLimit: 5});
+    }).toThrow(StepLimitExceeded);
+  });
 });

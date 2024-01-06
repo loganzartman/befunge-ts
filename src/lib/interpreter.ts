@@ -139,8 +139,10 @@ function execInstruction(state: State, c: string, _: Context) {
 }
 
 function stepState(state: State, context: Context): void {
-  const c = state.program.get(state.pcx, state.pcy);
-  execInstruction(state, c, context);
+  if (state.program.w > 0 && state.program.h > 0) {
+    const c = state.program.get(state.pcx, state.pcy);
+    execInstruction(state, c, context);
+  }
   stepPc(state);
 }
 
