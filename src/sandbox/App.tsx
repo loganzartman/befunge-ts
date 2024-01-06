@@ -110,7 +110,7 @@ export default function App() {
         const newCode = decodeHash(h.substring(1));
         setCode(newCode);
       } catch (e) {
-        console.log(e);
+        console.error(e);
       }
     }
   }, []);

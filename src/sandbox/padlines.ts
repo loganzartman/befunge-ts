@@ -35,7 +35,6 @@ export const padLines = ({char}: {char: string}): Extension => {
     let hasRemoval = false;
     tr.changes.iterChanges((fromA, toA, fromB, toB, inserted) => {
       if (isRemoval(fromA, toA, fromB, toB, inserted)) {
-        console.log(tr.changes);
         hasRemoval = true;
       }
     });
