@@ -9,7 +9,10 @@ import {useCallback, useEffect, useRef, useState} from 'preact/hooks';
 import {stepBefunge, StepLimitExceeded} from '@/lib/interpreter';
 import {State} from '@/lib/State';
 import {chr} from '@/lib/util';
-import {Heatmap, showHeatmap} from '@/sandbox/heatmap';
+import {showDebug} from '@/sandbox/extensions/showDebug';
+import {showHeatmap} from '@/sandbox/extensions/showHeatmap';
+import {DebugInfo} from '@/sandbox/metrics/debugInfo';
+import {Heatmap} from '@/sandbox/metrics/heatmap';
 import {padLines} from '@/sandbox/padlines';
 import {decodeHash, encodeHash} from '@/sandbox/sharing';
 
@@ -46,58 +49,61 @@ function StatusBadge({status}: {status: Status}) {
 
 export default function App() {
   const cmRef = useRef<ReactCodeMirrorRef>();
-  const heatmapRef = useRef<Heatmap>(new Heatmap());
+  const heatmap = useRef<Heatmap>(new Heatmap()).current;
+  const debugInfo = useRef<DebugInfo>(new DebugInfo()).current;
   const [status, setStatus] = useState<Status>('none');
   const [error, setError] = useState<unknown | null>(null);
   const [output, setOutput] = useState<string>('');
   const [programState, setProgramState] = useState<State | null>(null);
   const [code, setCode] = useState<string>('');
 
-  const update = useCallback((code: string, stepLimit: number) => {
-    setOutput('');
-    setProgramState(null);
-    setError(null);
-    setStatus('none');
+  const update = useCallback(
+    (code: string, stepLimit: number) => {
+      setOutput('');
+      setProgramState(null);
+      setError(null);
+      setStatus('none');
 
-    const doc = cmRef.current?.view?.state.doc;
-    const heatmap = heatmapRef.current;
-    heatmap.reset();
-    let lastPos = 0;
-    const outputBuffer = [];
+      const doc = cmRef.current?.view?.state.doc;
+      heatmap.reset();
+      let lastPos = 0;
+      const outputBuffer = [];
 
-    try {
-      let first = true;
-      let lastState: State | null = null;
-      for (const {state, output} of stepBefunge(code, {stepLimit})) {
-        if (first) {
-          heatmap.resize(state.program.w * state.program.h);
-          first = false;
-        }
-        if (doc) {
-          const line = doc.line(state.pcy + 1);
-          if (state.pcx < line.length) {
-            const pos = line.from + state.pcx;
-            lastPos = pos;
-            heatmap.bump(pos);
+      try {
+        let first = true;
+        let lastState: State | null = null;
+        for (const {state, output} of stepBefunge(code, {stepLimit})) {
+          if (first) {
+            heatmap.resize(state.program.w * state.program.h);
+            first = false;
           }
+          if (doc) {
+            const line = doc.line(state.pcy + 1);
+            if (state.pcx < line.length) {
+              const pos = line.from + state.pcx;
+              lastPos = pos;
+              heatmap.bump(pos);
+            }
+          }
+          outputBuffer.push(output);
+          lastState = state;
         }
-        outputBuffer.push(output);
-        lastState = state;
+        setProgramState(lastState);
+        setStatus('exited');
+      } catch (e) {
+        if (e instanceof StepLimitExceeded) {
+          setStatus('timeout');
+        } else {
+          debugInfo.markError(lastPos, e);
+          setError(e);
+          setStatus('error');
+        }
+      } finally {
+        setOutput(outputBuffer.join(''));
       }
-      setProgramState(lastState);
-      setStatus('exited');
-    } catch (e) {
-      if (e instanceof StepLimitExceeded) {
-        setStatus('timeout');
-      } else {
-        heatmap.error(lastPos);
-        setError(e);
-        setStatus('error');
-      }
-    } finally {
-      setOutput(outputBuffer.join(''));
-    }
-  }, []);
+    },
+    [debugInfo, heatmap],
+  );
 
   useEffect(() => {
     update(code, 10_000);
@@ -168,7 +174,8 @@ export default function App() {
           }}
           extensions={[
             padLines({char: ' '}),
-            showHeatmap(heatmapRef.current),
+            showHeatmap(heatmap),
+            showDebug(debugInfo),
             highlightWhitespace(),
             rectangularSelection({eventFilter: () => true}),
           ]}
