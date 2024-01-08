@@ -9,6 +9,7 @@ import {useCallback, useEffect, useMemo, useRef, useState} from 'preact/hooks';
 import {stepBefunge, StepLimitExceeded} from '@/lib/interpreter';
 import {State} from '@/lib/State';
 import {chr} from '@/lib/util';
+import {rowColPanel} from '@/sandbox/extensions/rowColPanel';
 import {showDebug} from '@/sandbox/extensions/showDebug';
 import {showHeatmap} from '@/sandbox/extensions/showHeatmap';
 import {showTrace} from '@/sandbox/extensions/showTrace';
@@ -158,6 +159,7 @@ export default function App() {
         vizMode === 'trace' && showTrace(trace),
         highlightWhitespace(),
         rectangularSelection({eventFilter: () => true}),
+        rowColPanel(),
       ].filter(Boolean),
     [debugInfo, heatmap, trace, vizMode],
   );
