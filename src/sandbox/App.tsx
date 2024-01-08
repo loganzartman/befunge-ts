@@ -1,18 +1,20 @@
-import {vscodeDark} from '@uiw/codemirror-theme-vscode';
+import {githubDark} from '@uiw/codemirror-theme-github';
 import CodeMirror, {
   highlightWhitespace,
   ReactCodeMirrorRef,
   rectangularSelection,
 } from '@uiw/react-codemirror';
-import {useCallback, useEffect, useRef, useState} from 'preact/hooks';
+import {useCallback, useEffect, useMemo, useRef, useState} from 'preact/hooks';
 
 import {stepBefunge, StepLimitExceeded} from '@/lib/interpreter';
 import {State} from '@/lib/State';
 import {chr} from '@/lib/util';
 import {showDebug} from '@/sandbox/extensions/showDebug';
 import {showHeatmap} from '@/sandbox/extensions/showHeatmap';
+import {showTrace} from '@/sandbox/extensions/showTrace';
 import {DebugInfo} from '@/sandbox/metrics/debugInfo';
 import {Heatmap} from '@/sandbox/metrics/heatmap';
+import {Trace} from '@/sandbox/metrics/trace';
 import {padLines} from '@/sandbox/padlines';
 import {decodeHash, encodeHash} from '@/sandbox/sharing';
 
@@ -47,15 +49,20 @@ function StatusBadge({status}: {status: Status}) {
   throw new Error('Invalid status');
 }
 
+const vizModes = ['none', 'heatmap', 'trace'];
+type VizMode = (typeof vizModes)[number];
+
 export default function App() {
   const cmRef = useRef<ReactCodeMirrorRef>();
   const heatmap = useRef<Heatmap>(new Heatmap()).current;
   const debugInfo = useRef<DebugInfo>(new DebugInfo()).current;
+  const trace = useRef<Trace>(new Trace({length: 16})).current;
   const [status, setStatus] = useState<Status>('none');
   const [error, setError] = useState<unknown | null>(null);
   const [output, setOutput] = useState<string>('');
   const [programState, setProgramState] = useState<State | null>(null);
   const [code, setCode] = useState<string>('');
+  const [vizMode, setVizMode] = useState<VizMode>('trace');
 
   const update = useCallback(
     (code: string, stepLimit: number) => {
@@ -65,7 +72,9 @@ export default function App() {
       setStatus('none');
 
       const doc = cmRef.current?.view?.state.doc;
+      debugInfo.reset();
       heatmap.reset();
+      trace.reset();
       let lastPos = 0;
       const outputBuffer = [];
 
@@ -83,6 +92,7 @@ export default function App() {
               const pos = line.from + state.pcx;
               lastPos = pos;
               heatmap.bump(pos);
+              trace.record(pos);
             }
           }
           outputBuffer.push(output);
@@ -102,7 +112,7 @@ export default function App() {
         setOutput(outputBuffer.join(''));
       }
     },
-    [debugInfo, heatmap],
+    [debugInfo, heatmap, trace],
   );
 
   useEffect(() => {
@@ -139,20 +149,45 @@ export default function App() {
     window.location.hash = encodeHash(code);
   }, [code]);
 
+  const extensions = useMemo(
+    () =>
+      [
+        padLines({char: ' '}),
+        showDebug(debugInfo),
+        vizMode === 'heatmap' && showHeatmap(heatmap),
+        vizMode === 'trace' && showTrace(trace),
+        highlightWhitespace(),
+        rectangularSelection({eventFilter: () => true}),
+      ].filter(Boolean),
+    [debugInfo, heatmap, trace, vizMode],
+  );
+
   return (
     <div class="flex flex-col items-center p-8">
       <h1 class="text-2xl mb-4 font-mono-serif">befunge-ts sandbox</h1>
       <main class="max-w-full w-[1000px] flex flex-col items-start">
         <div class="flex flex-row self-stretch gap-3 p-3 rounded-t-lg bg-zinc-900">
-          <button class="p-2 ring-2 ring-zinc-700 rounded-md font-mono-serif transition-colors hover:transition-none hover:bg-zinc-700">
-            Run
+          <button
+            onClick={() => alert('coming soon')}
+            class="p-2 ring-2 ring-zinc-700 rounded-md font-mono-serif transition-colors hover:transition-none hover:bg-zinc-700"
+          >
+            Debug
           </button>
-          <button class="p-2 ring-2 ring-zinc-700 rounded-md font-mono-serif transition-colors hover:transition-none hover:bg-zinc-700">
-            Step
-          </button>
-          <button class="p-2 ring-2 ring-zinc-700 rounded-md font-mono-serif transition-colors hover:transition-none hover:bg-zinc-700">
-            Stop
-          </button>
+          <label class="flex flex-row items-center gap-2 ring-2 ring-zinc-700 bg-zinc-700 rounded-md pl-2 font-mono-serif">
+            Visualize
+            <select
+              class="self-stretch px-2 bg-zinc-900 rounded-md"
+              value={vizMode}
+              onChange={(e) => setVizMode(e.currentTarget.value)}
+            >
+              {vizModes.map((mode) => (
+                <option key={mode} value={mode}>
+                  {mode}
+                </option>
+              ))}
+            </select>
+          </label>
+          <div class="flex-1" />
           <button
             onClick={handleShare}
             class="p-2 ring-2 ring-zinc-700 rounded-md font-mono-serif transition-colors hover:transition-none hover:bg-zinc-700"
@@ -163,7 +198,7 @@ export default function App() {
         <CodeMirror
           ref={cmRef}
           className="w-full"
-          theme={vscodeDark}
+          theme={githubDark}
           value={code}
           onChange={handleChange}
           basicSetup={{
@@ -172,13 +207,7 @@ export default function App() {
             indentOnInput: false,
             crosshairCursor: true,
           }}
-          extensions={[
-            padLines({char: ' '}),
-            showHeatmap(heatmap),
-            showDebug(debugInfo),
-            highlightWhitespace(),
-            rectangularSelection({eventFilter: () => true}),
-          ]}
+          extensions={extensions}
         />
         <div class="flex flex-col gap-2 mt-6 items-start">
           <div class="flex flex-row gap-2 items-center font-mono">

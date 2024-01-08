@@ -16,11 +16,12 @@ function heatmapDeco(view: EditorView, heatmap: Heatmap) {
   for (let pos = 0; pos < doc.length; pos++) {
     const h = heatmap.heat(pos);
     if (h > 0) {
-      const color = `hsla(40deg,80%,50%,${h.toFixed(2)})`;
+      const bg = `hsla(40deg,80%,${(h * 50).toFixed(2)}%,0.5)`;
+      const fg = `hsl(40deg,80%,${((h + 0.5) * 50).toFixed(2)}%)`;
 
       const decoration = Decoration.mark({
         attributes: {
-          style: `background-color: ${color}`,
+          style: `background-color: ${bg}; color: ${fg}`,
         },
       });
       builder.add(pos, pos + 1, decoration);
@@ -40,7 +41,7 @@ export const showHeatmap = (heatmap: Heatmap) =>
       }
 
       update(update: ViewUpdate) {
-        if (update.docChanged) {
+        if (update.docChanged || update.viewportChanged) {
           this.decorations = heatmapDeco(update.view, heatmap);
         }
       }

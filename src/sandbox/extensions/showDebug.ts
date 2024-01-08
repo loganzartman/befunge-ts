@@ -15,7 +15,14 @@ function debugDeco(view: EditorView, debug: DebugInfo) {
   for (const error of debug.errors) {
     const decoration = Decoration.mark({
       attributes: {
-        style: ['box-shadow: 0 0 0 2px red', 'border-radius: 4px'].join('; '),
+        style: [
+          'position: relative',
+          'padding: 0.1em',
+          'margin: -0.1em',
+          'color: red',
+          'box-shadow: 0 0 0 2px red',
+          'border-radius: 4px',
+        ].join('; '),
       },
     });
     builder.add(error.pos, error.pos + 1, decoration);
