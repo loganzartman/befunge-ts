@@ -208,6 +208,8 @@ export default function App() {
             bracketMatching: false,
             indentOnInput: false,
             crosshairCursor: true,
+            lineNumbers: false,
+            highlightActiveLine: false,
           }}
           extensions={extensions}
         />
