@@ -3,13 +3,16 @@ import {
   DecorationSet,
   EditorView,
   RangeSetBuilder,
-  ViewPlugin,
-  ViewUpdate,
 } from '@uiw/react-codemirror';
 
 import {Heatmap} from '@/sandbox/metrics/heatmap';
 
-function heatmapDeco(view: EditorView, heatmap: Heatmap) {
+export function heatmapDeco(
+  view: EditorView,
+  heatmap: Heatmap | null,
+): DecorationSet {
+  if (!heatmap) return Decoration.none;
+
   const builder = new RangeSetBuilder<Decoration>();
   const doc = view.state.doc;
 
@@ -30,21 +33,3 @@ function heatmapDeco(view: EditorView, heatmap: Heatmap) {
 
   return builder.finish();
 }
-
-export const showHeatmap = (heatmap: Heatmap) =>
-  ViewPlugin.fromClass(
-    class {
-      decorations: DecorationSet;
-
-      constructor(view: EditorView) {
-        this.decorations = heatmapDeco(view, heatmap);
-      }
-
-      update(update: ViewUpdate) {
-        if (update.docChanged || update.viewportChanged) {
-          this.decorations = heatmapDeco(update.view, heatmap);
-        }
-      }
-    },
-    {decorations: (v) => v.decorations},
-  );

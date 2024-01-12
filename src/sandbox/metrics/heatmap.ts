@@ -1,8 +1,11 @@
 export class Heatmap {
-  counts: number[] = [];
-  max: number = 0;
+  private counts: number[] = [];
+  private max: number = 0;
 
   resize(length: number) {
+    if (this.counts.length === length) {
+      return this;
+    }
     this.counts = Array.from<number>({length});
     this.reset();
     return this;

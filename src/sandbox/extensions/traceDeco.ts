@@ -1,15 +1,12 @@
 import {
   Decoration,
   DecorationSet,
-  EditorView,
   RangeSetBuilder,
-  ViewPlugin,
-  ViewUpdate,
 } from '@uiw/react-codemirror';
 
 import {Trace} from '@/sandbox/metrics/trace';
 
-function traceDeco(view: EditorView, trace: Trace) {
+export function traceDeco(trace: Trace): DecorationSet {
   const decorations: [number, Decoration][] = [];
 
   for (let i = 0; i < trace.positions.length; ++i) {
@@ -34,21 +31,3 @@ function traceDeco(view: EditorView, trace: Trace) {
     .forEach(([pos, value]) => builder.add(pos, pos + 1, value));
   return builder.finish();
 }
-
-export const showTrace = (trace: Trace) =>
-  ViewPlugin.fromClass(
-    class {
-      decorations: DecorationSet;
-
-      constructor(view: EditorView) {
-        this.decorations = traceDeco(view, trace);
-      }
-
-      update(update: ViewUpdate) {
-        if (update.docChanged || update.viewportChanged) {
-          this.decorations = traceDeco(update.view, trace);
-        }
-      }
-    },
-    {decorations: (v) => v.decorations},
-  );

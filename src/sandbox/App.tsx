@@ -1,23 +1,27 @@
 import {githubDark} from '@uiw/codemirror-theme-github';
 import CodeMirror, {
+  Decoration,
+  EditorState,
+  EditorView,
   highlightWhitespace,
   ReactCodeMirrorRef,
   rectangularSelection,
+  ViewUpdate,
 } from '@uiw/react-codemirror';
-import {useCallback, useEffect, useMemo, useRef, useState} from 'preact/hooks';
+import {useCallback, useEffect, useRef, useState} from 'preact/hooks';
 
 import {stepBefunge, StepLimitExceeded} from '@/lib/interpreter';
 import {State} from '@/lib/State';
 import {chr} from '@/lib/util';
+import {heatmapDeco} from '@/sandbox/extensions/heatmapDeco';
 import {rowColPanel} from '@/sandbox/extensions/rowColPanel';
 import {showDebug} from '@/sandbox/extensions/showDebug';
-import {showHeatmap} from '@/sandbox/extensions/showHeatmap';
-import {showTrace} from '@/sandbox/extensions/showTrace';
+import {traceDeco} from '@/sandbox/extensions/traceDeco';
 import {DebugInfo} from '@/sandbox/metrics/debugInfo';
 import {Heatmap} from '@/sandbox/metrics/heatmap';
 import {Trace} from '@/sandbox/metrics/trace';
-import {padLines} from '@/sandbox/padlines';
 import {decodeHash, encodeHash} from '@/sandbox/sharing';
+import {useStateField} from '@/sandbox/useStateField';
 
 type Status = 'none' | 'exited' | 'timeout' | 'error';
 
@@ -50,11 +54,11 @@ function StatusBadge({status}: {status: Status}) {
   throw new Error('Invalid status');
 }
 
-const vizModes = ['none', 'heatmap', 'trace'];
+const vizModes = ['none', 'heatmap', 'trace'] as const;
 type VizMode = (typeof vizModes)[number];
 
 export default function App() {
-  const cmRef = useRef<ReactCodeMirrorRef>();
+  const [cm, setCm] = useState<ReactCodeMirrorRef>();
   const heatmap = useRef<Heatmap>(new Heatmap()).current;
   const debugInfo = useRef<DebugInfo>(new DebugInfo()).current;
   const trace = useRef<Trace>(new Trace({length: 16})).current;
@@ -63,16 +67,27 @@ export default function App() {
   const [output, setOutput] = useState<string>('');
   const [programState, setProgramState] = useState<State | null>(null);
   const [code, setCode] = useState<string>('');
-  const [vizMode, setVizMode] = useState<VizMode>('trace');
+  const [vizMode, setVizMode, vizModeField] = useStateField<VizMode>(
+    cm?.view,
+    'trace',
+  );
+  const vizExtension = useRef(
+    EditorView.decorations.from(vizModeField, (vizMode) => (view) => {
+      if (vizMode === 'none') return Decoration.none;
+      if (vizMode === 'trace') return traceDeco(trace);
+      if (vizMode === 'heatmap') return heatmapDeco(view, heatmap);
+      throw new Error('Unsupported vizMode');
+    }),
+  ).current;
 
   const update = useCallback(
-    (code: string, stepLimit: number) => {
+    (code: string, view: EditorView, stepLimit: number) => {
       setOutput('');
       setProgramState(null);
       setError(null);
       setStatus('none');
 
-      const doc = cmRef.current?.view?.state.doc;
+      const doc = view.state.doc;
       debugInfo.reset();
       heatmap.reset();
       trace.reset();
@@ -80,13 +95,9 @@ export default function App() {
       const outputBuffer = [];
 
       try {
-        let first = true;
         let lastState: State | null = null;
         for (const {state, output} of stepBefunge(code, {stepLimit})) {
-          if (first) {
-            heatmap.resize(state.program.w * state.program.h);
-            first = false;
-          }
+          heatmap.resize(state.program.w * state.program.h);
           if (doc) {
             const line = doc.line(state.pcy + 1);
             if (state.pcx < line.length) {
@@ -117,10 +128,6 @@ export default function App() {
   );
 
   useEffect(() => {
-    update(code, 10_000);
-  }, [code, update]);
-
-  useEffect(() => {
     const h = window.location.hash;
     if (h) {
       try {
@@ -132,9 +139,25 @@ export default function App() {
     }
   }, []);
 
-  const handleChange = useCallback((value: string) => {
-    setCode(value);
-  }, []);
+  const handleCreate = useCallback(
+    (view: EditorView, state: EditorState) => {
+      const value = state.doc.toString();
+      update(value, view, 10_000);
+    },
+    [update],
+  );
+
+  const handleChange = useCallback(
+    (value: string, viewUpdate: ViewUpdate) => {
+      setCode(value);
+      update(value, viewUpdate.view, 10_000);
+    },
+    [update],
+  );
+
+  const handleShare = useCallback(() => {
+    window.location.hash = encodeHash(code);
+  }, [code]);
 
   const renderedStack = programState?.stack.map((val, i) => (
     <div
@@ -146,24 +169,6 @@ export default function App() {
     </div>
   ));
 
-  const handleShare = useCallback(() => {
-    window.location.hash = encodeHash(code);
-  }, [code]);
-
-  const extensions = useMemo(
-    () =>
-      [
-        padLines({char: ' '}),
-        showDebug(debugInfo),
-        vizMode === 'heatmap' && showHeatmap(heatmap),
-        vizMode === 'trace' && showTrace(trace),
-        highlightWhitespace(),
-        rectangularSelection({eventFilter: () => true}),
-        rowColPanel(),
-      ].filter(Boolean),
-    [debugInfo, heatmap, trace, vizMode],
-  );
-
   return (
     <div class="flex flex-col items-center p-8">
       <h1 class="text-2xl mb-4 font-mono-serif">befunge-ts sandbox</h1>
@@ -171,16 +176,16 @@ export default function App() {
         <div class="flex flex-row self-stretch gap-3 p-3 rounded-t-lg bg-zinc-900">
           <button
             onClick={() => alert('coming soon')}
-            class="p-2 ring-2 ring-zinc-700 rounded-md font-mono-serif transition-colors hover:transition-none hover:bg-zinc-700"
+            class="p-2 ring-2 ring-zinc-700 rounded-md font-mono transition-colors hover:transition-none hover:bg-zinc-700"
           >
             Debug
           </button>
           <label class="flex flex-row items-center gap-2 ring-2 ring-zinc-700 bg-zinc-700 rounded-md pl-2 font-mono-serif">
             Visualize
             <select
-              class="self-stretch px-2 bg-zinc-900 rounded-md"
+              class="self-stretch px-2 bg-zinc-900 rounded-md font-mono"
               value={vizMode}
-              onChange={(e) => setVizMode(e.currentTarget.value)}
+              onChange={(e) => setVizMode(e.currentTarget.value as VizMode)}
             >
               {vizModes.map((mode) => (
                 <option key={mode} value={mode}>
@@ -192,16 +197,17 @@ export default function App() {
           <div class="flex-1" />
           <button
             onClick={handleShare}
-            class="p-2 ring-2 ring-zinc-700 rounded-md font-mono-serif transition-colors hover:transition-none hover:bg-zinc-700"
+            class="p-2 ring-2 ring-zinc-700 rounded-md font-mono transition-colors hover:transition-none hover:bg-zinc-700"
           >
             Share
           </button>
         </div>
         <CodeMirror
-          ref={cmRef}
+          ref={setCm}
           className="w-full"
           theme={githubDark}
           value={code}
+          onCreateEditor={handleCreate}
           onChange={handleChange}
           basicSetup={{
             closeBrackets: false,
@@ -211,7 +217,14 @@ export default function App() {
             lineNumbers: false,
             highlightActiveLine: false,
           }}
-          extensions={extensions}
+          extensions={[
+            showDebug(debugInfo),
+            vizModeField.extension,
+            vizExtension,
+            highlightWhitespace(),
+            rectangularSelection({eventFilter: () => true}),
+            rowColPanel(),
+          ]}
         />
         <div class="flex flex-col gap-2 mt-6 items-start">
           <div class="flex flex-row gap-2 items-center font-mono">
