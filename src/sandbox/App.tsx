@@ -18,8 +18,7 @@ import {rowColPanel} from '@/sandbox/extensions/rowColPanel';
 import {showDebug} from '@/sandbox/extensions/showDebug';
 import {traceDeco} from '@/sandbox/extensions/traceDeco';
 import {DebugInfo} from '@/sandbox/metrics/debugInfo';
-import {Heatmap} from '@/sandbox/metrics/heatmap';
-import {Trace} from '@/sandbox/metrics/trace';
+import {MetricsRecorder} from '@/sandbox/metrics/metricsRecorder';
 import {decodeHash, encodeHash} from '@/sandbox/sharing';
 import {useStateField} from '@/sandbox/useStateField';
 
@@ -59,9 +58,10 @@ type VizMode = (typeof vizModes)[number];
 
 export default function App() {
   const [cm, setCm] = useState<ReactCodeMirrorRef>();
-  const heatmap = useRef<Heatmap>(new Heatmap()).current;
   const debugInfo = useRef<DebugInfo>(new DebugInfo()).current;
-  const trace = useRef<Trace>(new Trace({length: 16})).current;
+  const metrics = useRef<MetricsRecorder>(
+    new MetricsRecorder({maxTraceLength: 16}),
+  ).current;
   const [status, setStatus] = useState<Status>('none');
   const [error, setError] = useState<unknown | null>(null);
   const [output, setOutput] = useState<string>('');
@@ -74,8 +74,8 @@ export default function App() {
   const vizExtension = useRef(
     EditorView.decorations.from(vizModeField, (vizMode) => (view) => {
       if (vizMode === 'none') return Decoration.none;
-      if (vizMode === 'trace') return traceDeco(trace);
-      if (vizMode === 'heatmap') return heatmapDeco(view, heatmap);
+      if (vizMode === 'trace') return traceDeco(metrics);
+      if (vizMode === 'heatmap') return heatmapDeco(view, metrics);
       throw new Error('Unsupported vizMode');
     }),
   ).current;
@@ -89,22 +89,20 @@ export default function App() {
 
       const doc = view.state.doc;
       debugInfo.reset();
-      heatmap.reset();
-      trace.reset();
+      metrics.reset();
       let lastPos = 0;
       const outputBuffer = [];
 
       try {
         let lastState: State | null = null;
         for (const {state, output} of stepBefunge(code, {stepLimit})) {
-          heatmap.resize(state.program.w * state.program.h);
+          metrics.resize(state.program.w * state.program.h);
           if (doc) {
             const line = doc.line(state.pcy + 1);
             if (state.pcx < line.length) {
               const pos = line.from + state.pcx;
               lastPos = pos;
-              heatmap.bump(pos);
-              trace.record(pos);
+              metrics.exec(pos, state);
             }
           }
           outputBuffer.push(output);
@@ -124,7 +122,7 @@ export default function App() {
         setOutput(outputBuffer.join(''));
       }
     },
-    [debugInfo, heatmap, trace],
+    [debugInfo, metrics],
   );
 
   useEffect(() => {

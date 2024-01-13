@@ -29,7 +29,7 @@ function stepPc(state: State): void {
   state.pcy = mod(pcy, state.program.h);
 }
 
-function getInstruction(state: State): Instruction {
+export function getInstruction(state: State): Instruction {
   const c = state.program.get(state.pcx, state.pcy);
   if (state.stringmode && c !== '"') {
     return {type: InstructionType.pushLiteral, value: ord(c)};
@@ -212,7 +212,7 @@ function step(state: State, context: Context): void {
   stepPc(state);
 }
 
-type Step = {state: State; output: string};
+export type Step = {state: State; output: string};
 
 function* execute(state: State, context: Context): Generator<Step> {
   let i = 0;
