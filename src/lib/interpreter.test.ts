@@ -8,6 +8,15 @@ describe('execBefunge', () => {
     expect(result).toBe('1 ');
   });
 
+  it('handles directions', () => {
+    const result = execBefunge(dedent`
+      v
+      1>.@
+      >^
+    `);
+    expect(result).toBe('1 ');
+  });
+
   it('g instruction', () => {
     const result = execBefunge('50g,@x');
     expect(result).toBe('x');

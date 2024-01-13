@@ -1,5 +1,6 @@
 import {Context} from '@/lib/Context';
 import {ALL_DIRECTIONS, Direction} from '@/lib/Direction';
+import {Instruction, InstructionType} from '@/lib/instructions';
 import {createProgram} from '@/lib/Program';
 import {State} from '@/lib/State';
 import {choice, chr, mod, ord} from '@/lib/util';
@@ -28,134 +29,199 @@ function stepPc(state: State): void {
   state.pcy = mod(pcy, state.program.h);
 }
 
-function execInstruction(state: State, c: string, _: Context) {
+function getInstruction(state: State): Instruction {
+  const c = state.program.get(state.pcx, state.pcy);
   if (state.stringmode && c !== '"') {
-    state.push(ord(c));
-    return;
+    return {type: InstructionType.pushLiteral, value: ord(c)};
   }
 
-  if (c === ' ') {
-    // no-op
-  } else if (c === '+') {
+  if (c === ' ') return {type: InstructionType.noop};
+  else if (c === '+') return {type: InstructionType.add};
+  else if (c === '-') return {type: InstructionType.subtract};
+  else if (c === '*') return {type: InstructionType.multiply};
+  else if (c === '/') return {type: InstructionType.divide};
+  else if (c === '%') return {type: InstructionType.mod};
+  else if (c === '!') return {type: InstructionType.not};
+  else if (c === '`') return {type: InstructionType.greater};
+  else if (c === '>') return {type: InstructionType.right};
+  else if (c === 'v') return {type: InstructionType.down};
+  else if (c === '<') return {type: InstructionType.left};
+  else if (c === '^') return {type: InstructionType.up};
+  else if (c === '?') return {type: InstructionType.random};
+  else if (c === '_') return {type: InstructionType.branchHorizontal};
+  else if (c === '|') return {type: InstructionType.branchVertical};
+  else if (c === '"') return {type: InstructionType.toggleString};
+  else if (c === ':') return {type: InstructionType.duplicate};
+  else if (c === '\\') return {type: InstructionType.swap};
+  else if (c === '$') return {type: InstructionType.pop};
+  else if (c === '.') return {type: InstructionType.outputNumber};
+  else if (c === ',') return {type: InstructionType.outputChar};
+  else if (c === '#') return {type: InstructionType.skip};
+  else if (c === 'g') return {type: InstructionType.get};
+  else if (c === 'p') return {type: InstructionType.put};
+  else if (c === '&') return {type: InstructionType.readNumber};
+  else if (c === '~') return {type: InstructionType.readChar};
+  else if (c === '@') return {type: InstructionType.exit};
+  else if (c >= '0' && c <= '9')
+    return {type: InstructionType.pushLiteral, value: Number.parseInt(c, 10)};
+
+  throw new Error(`Unsupported command '${c}'`);
+}
+
+type Behavior = (args: {
+  state: State;
+  inst: Instruction;
+  context: Context;
+}) => void;
+
+const behaviorTable: Record<InstructionType, Behavior> = {
+  [InstructionType.noop]: () => {},
+  [InstructionType.add]: ({state}) => {
     const [a, b] = [state.pop(), state.pop()];
     state.push(a + b);
-  } else if (c === '-') {
+  },
+  [InstructionType.subtract]: ({state}) => {
     const [a, b] = [state.pop(), state.pop()];
     state.push(b - a);
-  } else if (c === '*') {
+  },
+  [InstructionType.multiply]: ({state}) => {
     const [a, b] = [state.pop(), state.pop()];
     state.push(a * b);
-  } else if (c === '/') {
+  },
+  [InstructionType.divide]: ({state}) => {
     const [a, b] = [state.pop(), state.pop()];
     if (a === 0) {
       throw new Error('div by 0; what result do you want?');
     }
     state.push(Math.floor(b / a));
-  } else if (c === '%') {
+  },
+  [InstructionType.mod]: ({state}) => {
     const [a, b] = [state.pop(), state.pop()];
     if (a === 0) {
       throw new Error('div by 0; what result do you want?');
     }
     state.push(mod(b, a));
-  } else if (c === '!') {
+  },
+  [InstructionType.not]: ({state}) => {
     const a = state.pop();
     if (a === 0) {
       state.push(1);
     } else {
       state.push(0);
     }
-  } else if (c === '`') {
+  },
+  [InstructionType.greater]: ({state}) => {
     const [a, b] = [state.pop(), state.pop()];
     if (b > a) {
       state.push(1);
     } else {
       state.push(0);
     }
-  } else if (c === '>') {
+  },
+  [InstructionType.right]: ({state}) => {
     state.direction = Direction.RIGHT;
-  } else if (c === 'v') {
+  },
+  [InstructionType.down]: ({state}) => {
     state.direction = Direction.DOWN;
-  } else if (c === '<') {
+  },
+  [InstructionType.left]: ({state}) => {
     state.direction = Direction.LEFT;
-  } else if (c === '^') {
+  },
+  [InstructionType.up]: ({state}) => {
     state.direction = Direction.UP;
-  } else if (c === '?') {
+  },
+  [InstructionType.random]: ({state}) => {
     state.direction = choice(ALL_DIRECTIONS);
-  } else if (c === '_') {
+  },
+  [InstructionType.branchHorizontal]: ({state}) => {
     const a = state.pop();
     if (a === 0) {
       state.direction = Direction.RIGHT;
     } else {
       state.direction = Direction.LEFT;
     }
-  } else if (c === '|') {
+  },
+  [InstructionType.branchVertical]: ({state}) => {
     const a = state.pop();
     if (a === 0) {
       state.direction = Direction.DOWN;
     } else {
       state.direction = Direction.UP;
     }
-  } else if (c === '"') {
+  },
+  [InstructionType.toggleString]: ({state}) => {
     state.stringmode = !state.stringmode;
-  } else if (c === ':') {
+  },
+  [InstructionType.duplicate]: ({state}) => {
     const a = state.pop();
     state.push(a);
     state.push(a);
-  } else if (c === '\\') {
+  },
+  [InstructionType.swap]: ({state}) => {
     const [a, b] = [state.pop(), state.pop()];
     state.push(a);
     state.push(b);
-  } else if (c === '$') {
+  },
+  [InstructionType.pop]: ({state}) => {
     state.pop();
-  } else if (c === '.') {
+  },
+  [InstructionType.outputNumber]: ({state}) => {
     state.output.push(`${state.pop()} `);
-  } else if (c === ',') {
+  },
+  [InstructionType.outputChar]: ({state}) => {
     state.output.push(chr(state.pop()));
-  } else if (c === '#') {
+  },
+  [InstructionType.skip]: ({state}) => {
     stepPc(state);
-  } else if (c === 'g') {
+  },
+  [InstructionType.get]: ({state}) => {
     const [y, x] = [state.pop(), state.pop()];
     if (!state.program.inBounds(x, y)) {
       return 0;
     }
     const code = ord(state.program.get(x, y));
     state.push(code);
-  } else if (c === 'p') {
+  },
+  [InstructionType.put]: ({state}) => {
     const [y, x, v] = [state.pop(), state.pop(), state.pop()];
     if (state.program.inBounds(x, y)) {
       state.program.set(x, y, chr(v));
     }
-  } else if (c === '&') {
+  },
+  [InstructionType.readNumber]: () => {
     throw new Error('Not implemented');
-  } else if (c === '~') {
+  },
+  [InstructionType.readChar]: () => {
     throw new Error('Not implemented');
-  } else if (c === '@') {
+  },
+  [InstructionType.exit]: () => {
     throw new ExitProgram();
-  } else if (c >= '0' && c <= '9') {
-    state.push(Number.parseInt(c, 10));
-  } else {
-    throw new Error(`Unsupported command '${c}'`);
-  }
-}
+  },
+  [InstructionType.pushLiteral]: ({state, inst}) => {
+    if (inst.type !== 'pushLiteral') throw new Error('internal error');
+    state.push(inst.value);
+  },
+};
 
-function stepState(state: State, context: Context): void {
+function step(state: State, context: Context): void {
   if (state.program.w > 0 && state.program.h > 0) {
-    const c = state.program.get(state.pcx, state.pcy);
-    execInstruction(state, c, context);
+    const inst = getInstruction(state);
+    const behavior = behaviorTable[inst.type];
+    behavior({state, inst, context});
   }
   stepPc(state);
 }
 
 type Step = {state: State; output: string};
 
-function* runState(state: State, context: Context): Generator<Step> {
+function* execute(state: State, context: Context): Generator<Step> {
   let i = 0;
   while (true) {
     if (i++ > context.stepLimit) {
       throw new StepLimitExceeded();
     }
     try {
-      stepState(state, context);
+      step(state, context);
       const output = state.getOutput();
       state.output.length = 0;
       yield {state, output};
@@ -182,7 +248,7 @@ export function* stepBefunge(
   const program = createProgram(src);
   const state = new State(program);
   const context = {interactive: false, stepLimit: Infinity, ...contextOptions};
-  yield* runState(state, context);
+  yield* execute(state, context);
 }
 
 /**
