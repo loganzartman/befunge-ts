@@ -1,4 +1,4 @@
-import {githubDark} from '@uiw/codemirror-theme-github';
+import {materialDark} from '@uiw/codemirror-theme-material';
 import CodeMirror, {
   Decoration,
   EditorState,
@@ -207,7 +207,7 @@ export default function App() {
         <CodeMirror
           ref={setCm}
           className="w-full"
-          theme={githubDark}
+          theme={materialDark}
           value={code}
           onCreateEditor={handleCreate}
           onChange={handleChange}

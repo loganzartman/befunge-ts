@@ -44,6 +44,7 @@
     "@typescript-eslint/eslint-plugin": "^6.18.1",
     "@typescript-eslint/parser": "^6.18.1",
     "@uiw/codemirror-theme-github": "^4.21.21",
+    "@uiw/codemirror-theme-material": "^4.21.21",
     "@uiw/react-codemirror": "^4.21.21",
     "base2048": "^2.0.2",
     "codemirror": "^6.0.1",
