@@ -1,3 +1,4 @@
+import {BefungeError} from '@/lib/BefungeError';
 import {Context} from '@/lib/Context';
 import {ALL_DIRECTIONS, Direction} from '@/lib/Direction';
 import {Instruction, InstructionType} from '@/lib/instructions';
@@ -23,7 +24,7 @@ function stepPc(state: State): void {
   } else if (state.direction === Direction.UP) {
     pcy -= 1;
   } else {
-    throw new Error('Invalid direction');
+    throw new BefungeError('Invalid direction');
   }
   state.pcx = mod(pcx, state.program.w);
   state.pcy = mod(pcy, state.program.h);
@@ -32,7 +33,7 @@ function stepPc(state: State): void {
 export function getInstruction(state: State): Instruction {
   const c = state.program.get(state.pcx, state.pcy);
   if (state.stringmode && c !== '"') {
-    return {type: InstructionType.pushLiteral, value: ord(c)};
+    return {type: InstructionType.pushLiteral, value: c};
   }
 
   if (c === ' ') return {type: InstructionType.noop};
@@ -65,7 +66,7 @@ export function getInstruction(state: State): Instruction {
   else if (c >= '0' && c <= '9')
     return {type: InstructionType.pushLiteral, value: Number.parseInt(c, 10)};
 
-  throw new Error(`Unsupported command '${c}'`);
+  throw new BefungeError(`Unsupported command '${c}'`);
 }
 
 type Behavior = (args: {
@@ -91,14 +92,14 @@ const behaviorTable: Record<InstructionType, Behavior> = {
   [InstructionType.divide]: ({state}) => {
     const [a, b] = [state.pop(), state.pop()];
     if (a === 0) {
-      throw new Error('div by 0; what result do you want?');
+      throw new BefungeError('div by 0; what result do you want?');
     }
     state.push(Math.floor(b / a));
   },
   [InstructionType.mod]: ({state}) => {
     const [a, b] = [state.pop(), state.pop()];
     if (a === 0) {
-      throw new Error('div by 0; what result do you want?');
+      throw new BefungeError('div by 0; what result do you want?');
     }
     state.push(mod(b, a));
   },
@@ -189,17 +190,24 @@ const behaviorTable: Record<InstructionType, Behavior> = {
     }
   },
   [InstructionType.readNumber]: () => {
-    throw new Error('Not implemented');
+    throw new BefungeError('Not implemented');
   },
   [InstructionType.readChar]: () => {
-    throw new Error('Not implemented');
+    throw new BefungeError('Not implemented');
   },
   [InstructionType.exit]: () => {
     throw new ExitProgram();
   },
   [InstructionType.pushLiteral]: ({state, inst}) => {
     if (inst.type !== 'pushLiteral') throw new Error('internal error');
-    state.push(inst.value);
+
+    if (typeof inst.value === 'number') state.push(inst.value);
+    else if (typeof inst.value === 'string') state.push(ord(inst.value));
+    else {
+      throw new Error(
+        `Unsupported push-literal value type: ${typeof inst.value}`,
+      );
+    }
   },
 };
 

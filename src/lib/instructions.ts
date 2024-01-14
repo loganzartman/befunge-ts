@@ -33,4 +33,4 @@ export type InstructionType = keyof typeof InstructionType;
 
 export type Instruction =
   | {type: Exclude<InstructionType, 'pushLiteral'>}
-  | {type: 'pushLiteral'; value: number};
+  | {type: 'pushLiteral'; value: string | number};
