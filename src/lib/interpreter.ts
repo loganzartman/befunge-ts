@@ -4,6 +4,7 @@ import {ALL_DIRECTIONS, Direction} from '@/lib/Direction';
 import {Instruction, InstructionType} from '@/lib/instructions';
 import {createProgram} from '@/lib/Program';
 import {State} from '@/lib/State';
+import {StepContext} from '@/lib/StepContext';
 import {choice, chr, mod, ord} from '@/lib/util';
 
 class ExitProgram {}
@@ -72,7 +73,7 @@ export function getInstruction(state: State): Instruction {
 type Behavior = (args: {
   state: State;
   inst: Instruction;
-  context: Context;
+  context: StepContext;
 }) => void;
 
 const behaviorTable: Record<InstructionType, Behavior> = {
@@ -211,7 +212,7 @@ const behaviorTable: Record<InstructionType, Behavior> = {
   },
 };
 
-function step(state: State, context: Context): void {
+function step(state: State, context: StepContext): void {
   if (state.program.w > 0 && state.program.h > 0) {
     const inst = getInstruction(state);
     const behavior = behaviorTable[inst.type];
@@ -222,14 +223,20 @@ function step(state: State, context: Context): void {
 
 export type Step = {state: State; output: string};
 
-function* execute(state: State, context: Context): Generator<Step> {
+async function* noInput() {
+  throw new Error('No input source provided');
+}
+
+async function* execute(state: State, context: Context): AsyncGenerator<Step> {
+  const input = context.input?.() ?? noInput();
+  const stepContext = {input};
   let i = 0;
   while (true) {
     if (i++ > context.stepLimit) {
       throw new StepLimitExceeded();
     }
     try {
-      step(state, context);
+      step(state, stepContext);
       const output = state.getOutput();
       state.output.length = 0;
       yield {state, output};
@@ -249,10 +256,10 @@ function* execute(state: State, context: Context): Generator<Step> {
  * @param contextOptions
  * @yields output of each step
  */
-export function* stepBefunge(
+export async function* stepBefunge(
   src: string,
   contextOptions: Partial<Context> = {},
-): Generator<Step> {
+): AsyncGenerator<Step> {
   const program = createProgram(src);
   const state = new State(program);
   const context = {interactive: false, stepLimit: Infinity, ...contextOptions};
@@ -265,12 +272,12 @@ export function* stepBefunge(
  * @param contextOptions
  * @returns output of Befunge program
  */
-export function execBefunge(
+export async function execBefunge(
   src: string,
   contextOptions: Partial<Context> = {},
-): string | undefined {
+): Promise<string | undefined> {
   const outputBuffer = [];
-  for (const {output} of stepBefunge(src, contextOptions))
+  for await (const {output} of stepBefunge(src, contextOptions))
     outputBuffer.push(output);
   return outputBuffer.join('');
 }

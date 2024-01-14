@@ -84,7 +84,7 @@ export default function App() {
   ).current;
 
   const update = useCallback(
-    (code: string, view: EditorView, stepLimit: number) => {
+    async (code: string, view: EditorView, stepLimit: number) => {
       setOutput('');
       setProgramState(null);
       setError(null);
@@ -98,7 +98,7 @@ export default function App() {
 
       try {
         let lastState: State | null = null;
-        for (const {state, output} of stepBefunge(code, {stepLimit})) {
+        for await (const {state, output} of stepBefunge(code, {stepLimit})) {
           // need to account for line breaks
           metrics.resize((state.program.w + 1) * state.program.h);
           if (doc) {

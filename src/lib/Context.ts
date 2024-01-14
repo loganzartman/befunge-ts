@@ -1,4 +1,4 @@
 export type Context = {
-  interactive: boolean;
   stepLimit: number;
+  input?: () => AsyncGenerator<string>;
 };
