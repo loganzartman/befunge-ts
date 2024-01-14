@@ -16,6 +16,7 @@ import {chr} from '@/lib/util';
 import {heatmapDeco} from '@/sandbox/extensions/heatmapDeco';
 import {rowColPanel} from '@/sandbox/extensions/rowColPanel';
 import {showDebug} from '@/sandbox/extensions/showDebug';
+import {syntaxDeco} from '@/sandbox/extensions/syntaxDeco';
 import {traceDeco} from '@/sandbox/extensions/traceDeco';
 import {DebugInfo} from '@/sandbox/metrics/debugInfo';
 import {MetricsRecorder} from '@/sandbox/metrics/metricsRecorder';
@@ -53,7 +54,7 @@ function StatusBadge({status}: {status: Status}) {
   throw new Error('Invalid status');
 }
 
-const vizModes = ['none', 'heatmap', 'trace'] as const;
+const vizModes = ['none', 'syntax', 'heatmap', 'trace'] as const;
 type VizMode = (typeof vizModes)[number];
 
 export default function App() {
@@ -69,11 +70,13 @@ export default function App() {
   const [code, setCode] = useState<string>('');
   const [vizMode, setVizMode, vizModeField] = useStateField<VizMode>(
     cm?.view,
-    'trace',
+    'syntax',
   );
+
   const vizExtension = useRef(
     EditorView.decorations.from(vizModeField, (vizMode) => (view) => {
       if (vizMode === 'none') return Decoration.none;
+      if (vizMode === 'syntax') return syntaxDeco(view, metrics);
       if (vizMode === 'trace') return traceDeco(metrics);
       if (vizMode === 'heatmap') return heatmapDeco(view, metrics);
       throw new Error('Unsupported vizMode');
@@ -96,11 +99,12 @@ export default function App() {
       try {
         let lastState: State | null = null;
         for (const {state, output} of stepBefunge(code, {stepLimit})) {
-          metrics.resize(state.program.w * state.program.h);
+          // need to account for line breaks
+          metrics.resize((state.program.w + 1) * state.program.h);
           if (doc) {
             const line = doc.line(state.pcy + 1);
             if (state.pcx < line.length) {
-              const pos = line.from + state.pcx;
+              const pos = line.from + Math.min(line.length - 1, state.pcx);
               lastPos = pos;
               metrics.exec(pos, state);
             }
@@ -179,7 +183,7 @@ export default function App() {
             Debug
           </button>
           <label class="flex flex-row items-center gap-2 ring-2 ring-zinc-700 bg-zinc-700 rounded-md pl-2 font-mono-serif">
-            Visualize
+            View
             <select
               class="self-stretch px-2 bg-zinc-900 rounded-md font-mono"
               value={vizMode}
