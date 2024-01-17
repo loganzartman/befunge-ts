@@ -1,7 +1,7 @@
 import {materialDark} from '@uiw/codemirror-theme-material';
 import CodeMirror, {
+  crosshairCursor,
   Decoration,
-  EditorState,
   EditorView,
   highlightWhitespace,
   ReactCodeMirrorRef,
@@ -10,6 +10,7 @@ import CodeMirror, {
 } from '@uiw/react-codemirror';
 import {useCallback, useEffect, useRef, useState} from 'preact/hooks';
 
+import {InputExhaustedError, inputFromString} from '@/lib/input';
 import {stepBefunge, StepLimitExceeded} from '@/lib/interpreter';
 import {State} from '@/lib/State';
 import {chr} from '@/lib/util';
@@ -23,13 +24,19 @@ import {MetricsRecorder} from '@/sandbox/metrics/metricsRecorder';
 import {decodeHash, encodeHash} from '@/sandbox/sharing';
 import {useStateField} from '@/sandbox/useStateField';
 
-type Status = 'none' | 'exited' | 'timeout' | 'error';
+type Status = 'none' | 'awaiting' | 'exited' | 'timeout' | 'error';
 
 function StatusBadge({status}: {status: Status}) {
   if (status === 'none') {
     return (
       <div class="inline-block rounded-lg px-2 py-1 font-mono-serif bg-blue-300 text-blue-900">
         Loading
+      </div>
+    );
+  } else if (status === 'awaiting') {
+    return (
+      <div class="inline-block rounded-lg px-2 py-1 font-mono-serif bg-violet-300 text-violet-900">
+        Waiting
       </div>
     );
   } else if (status === 'exited') {
@@ -59,6 +66,7 @@ type VizMode = (typeof vizModes)[number];
 
 export default function App() {
   const [cm, setCm] = useState<ReactCodeMirrorRef>();
+  const inputRef = useRef<HTMLInputElement>(null);
   const debugInfo = useRef<DebugInfo>(new DebugInfo()).current;
   const metrics = useRef<MetricsRecorder>(
     new MetricsRecorder({maxTraceLength: 16}),
@@ -84,21 +92,29 @@ export default function App() {
   ).current;
 
   const update = useCallback(
-    async (code: string, view: EditorView, stepLimit: number) => {
+    async (view: EditorView, stepLimit: number) => {
       setOutput('');
       setProgramState(null);
       setError(null);
       setStatus('none');
 
       const doc = view.state.doc;
+      const code = doc.toString();
       debugInfo.reset();
       metrics.reset();
       let lastPos = 0;
       const outputBuffer = [];
+      const inputString = inputRef.current?.value ?? '';
+      const input = inputFromString(inputString);
+      console.log('input', inputString);
 
       try {
         let lastState: State | null = null;
-        for await (const {state, output} of stepBefunge(code, {stepLimit})) {
+        const steps = stepBefunge(code, {
+          stepLimit,
+          input,
+        });
+        for await (const {state, output} of steps) {
           // need to account for line breaks
           metrics.resize((state.program.w + 1) * state.program.h);
           if (doc) {
@@ -117,6 +133,9 @@ export default function App() {
       } catch (e) {
         if (e instanceof StepLimitExceeded) {
           setStatus('timeout');
+        } else if (e instanceof InputExhaustedError) {
+          setError(e);
+          setStatus('awaiting');
         } else {
           debugInfo.markError(lastPos, e);
           setError(e);
@@ -142,9 +161,8 @@ export default function App() {
   }, []);
 
   const handleCreate = useCallback(
-    (view: EditorView, state: EditorState) => {
-      const value = state.doc.toString();
-      update(value, view, 10_000);
+    (view: EditorView) => {
+      update(view, 10_000);
     },
     [update],
   );
@@ -152,10 +170,15 @@ export default function App() {
   const handleChange = useCallback(
     (value: string, viewUpdate: ViewUpdate) => {
       setCode(value);
-      update(value, viewUpdate.view, 10_000);
+      update(viewUpdate.view, 10_000);
     },
     [update],
   );
+
+  const handleInputChange = useCallback(() => {
+    const view = cm?.view;
+    if (view) update(view, 10_000);
+  }, [cm, update]);
 
   const handleShare = useCallback(() => {
     window.location.hash = encodeHash(code);
@@ -174,7 +197,7 @@ export default function App() {
   return (
     <div class="flex flex-col items-center p-8">
       <h1 class="text-2xl mb-4 font-mono-serif">befunge-ts sandbox</h1>
-      <main class="max-w-full w-[1000px] flex flex-col items-start">
+      <main class="max-w-full w-[1000px] flex flex-col items-stretch">
         <div class="flex flex-row self-stretch gap-3 p-3 rounded-t-lg bg-zinc-900">
           <button
             onClick={() => alert('coming soon')}
@@ -215,7 +238,6 @@ export default function App() {
             closeBrackets: false,
             bracketMatching: false,
             indentOnInput: false,
-            crosshairCursor: true,
             lineNumbers: false,
             highlightActiveLine: false,
           }}
@@ -228,14 +250,19 @@ export default function App() {
             rowColPanel(),
           ]}
         />
-        <div class="flex flex-col gap-2 mt-6 items-start">
-          <div class="flex flex-row gap-2 items-center font-mono">
+        <div class="flex flex-col mt-4 gap-2 items-stretch">
+          <label class="flex items-center pl-2 rounded-md font-mono-serif ring-2 ring-zinc-700 bg-zinc-700">
+            <span>Input</span>
+            <input
+              type="text"
+              ref={inputRef}
+              onInput={handleInputChange}
+              class="flex-grow font-mono ml-2 p-2 rounded-md bg-zinc-900"
+            />
+          </label>
+          <div class="flex flex-row mt-6 gap-2 items-center font-mono">
             <StatusBadge status={status} />
-            {error && (
-              <div class="text-red-300">
-                {error.toString().replace(/^Error: /, '')}
-              </div>
-            )}
+            {error && <div>{error.toString().replace(/^Error: /, '')}</div>}
           </div>
           <div class="grid grid-cols-[auto,1fr] gap-2 mt-2 items-start">
             <div class="font-mono-serif bg-zinc-300 text-zinc-900 px-2 py-1 rounded-lg text-center">

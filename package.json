@@ -7,7 +7,7 @@
   ],
   "main": "dist/index.js",
   "scripts": {
-    "test": "pnpm jest",
+    "test": "pnpm jest src",
     "start": "pnpm parcel",
     "build": "pnpm build-lib && pnpm build-parcel",
     "build-parcel": "pnpm parcel build",

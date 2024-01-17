@@ -1,6 +1,7 @@
 import {BefungeError} from '@/lib/BefungeError';
 import {Context} from '@/lib/Context';
 import {ALL_DIRECTIONS, Direction} from '@/lib/Direction';
+import {readChar, readInteger} from '@/lib/input';
 import {Instruction, InstructionType} from '@/lib/instructions';
 import {createProgram} from '@/lib/Program';
 import {State} from '@/lib/State';
@@ -74,7 +75,7 @@ type Behavior = (args: {
   state: State;
   inst: Instruction;
   context: StepContext;
-}) => void;
+}) => Promise<void> | void;
 
 const behaviorTable: Record<InstructionType, Behavior> = {
   [InstructionType.noop]: () => {},
@@ -179,10 +180,11 @@ const behaviorTable: Record<InstructionType, Behavior> = {
   [InstructionType.get]: ({state}) => {
     const [y, x] = [state.pop(), state.pop()];
     if (!state.program.inBounds(x, y)) {
-      return 0;
+      state.push(0);
+    } else {
+      const code = ord(state.program.get(x, y));
+      state.push(code);
     }
-    const code = ord(state.program.get(x, y));
-    state.push(code);
   },
   [InstructionType.put]: ({state}) => {
     const [y, x, v] = [state.pop(), state.pop(), state.pop()];
@@ -190,11 +192,11 @@ const behaviorTable: Record<InstructionType, Behavior> = {
       state.program.set(x, y, chr(v));
     }
   },
-  [InstructionType.readNumber]: () => {
-    throw new BefungeError('Not implemented');
+  [InstructionType.readNumber]: async ({state, context}) => {
+    state.push(await readInteger(context.input));
   },
-  [InstructionType.readChar]: () => {
-    throw new BefungeError('Not implemented');
+  [InstructionType.readChar]: async ({state, context}) => {
+    state.push(ord(await readChar(context.input)));
   },
   [InstructionType.exit]: () => {
     throw new ExitProgram();
@@ -212,23 +214,21 @@ const behaviorTable: Record<InstructionType, Behavior> = {
   },
 };
 
-function step(state: State, context: StepContext): void {
+async function step(state: State, context: StepContext): Promise<void> {
   if (state.program.w > 0 && state.program.h > 0) {
     const inst = getInstruction(state);
     const behavior = behaviorTable[inst.type];
-    behavior({state, inst, context});
+    await behavior({state, inst, context});
   }
   stepPc(state);
 }
 
 export type Step = {state: State; output: string};
 
-async function* noInput() {
-  throw new Error('No input source provided');
-}
+async function* noInput() {}
 
 async function* execute(state: State, context: Context): AsyncGenerator<Step> {
-  const input = context.input?.() ?? noInput();
+  const input = context.input ?? noInput();
   const stepContext = {input};
   let i = 0;
   while (true) {
@@ -236,7 +236,7 @@ async function* execute(state: State, context: Context): AsyncGenerator<Step> {
       throw new StepLimitExceeded();
     }
     try {
-      step(state, stepContext);
+      await step(state, stepContext);
       const output = state.getOutput();
       state.output.length = 0;
       yield {state, output};

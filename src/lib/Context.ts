@@ -1,4 +1,4 @@
 export type Context = {
   stepLimit: number;
-  input?: () => AsyncGenerator<string>;
+  input?: AsyncGenerator<string>;
 };

@@ -24,6 +24,11 @@ body {
   color: #bbb;
 }
 
+.cm-panels-bottom {
+  border-bottom-left-radius: 0.5rem;
+  border-bottom-right-radius: 0.5rem;
+}
+
 .cm-editor {
   font-size: 14pt;
   font-variant-ligatures: none;
@@ -34,11 +39,9 @@ body {
 }
 
 .cm-editor .cm-scroller {
-  line-height: 1;
-}
-
-.cm-editor .cm-scroller {
   font-family: 'Monaspace Neon';
+  padding: 0.5rem;
+  line-height: 1;
 }
 
 .cm-editor .cm-content {

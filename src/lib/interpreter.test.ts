@@ -47,4 +47,24 @@ describe('execBefunge', () => {
       await execBefunge('', {stepLimit: 5});
     }).toThrow(StepLimitExceeded);
   });
+
+  // it('reads a single character', async () => {
+  //   expect(await execBefunge('~,@', {input: inputFromString('x')})).toBe('x');
+  // });
+
+  // it('reads a single integer', async () => {
+  //   expect(await execBefunge('&.@', {input: inputFromString('1')})).toBe('1 ');
+  // });
+
+  // it('reads a bigger integer', async () => {
+  //   expect(await execBefunge('&.@', {input: inputFromString('123')})).toBe(
+  //     '123 ',
+  //   );
+  // });
+
+  // it('reads an int, a char, and an int', async () => {
+  //   expect(
+  //     await execBefunge('&~&.,.@', {input: inputFromString('123 x 8')}),
+  //   ).toBe('123 x8 ');
+  // });
 });
